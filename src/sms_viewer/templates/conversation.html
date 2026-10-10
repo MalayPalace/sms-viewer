@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}{{ address }} - SMS Viewer{% endblock %}
+
+{% block navbar_back %}
+<a href="{{ url_for('views.threads') }}" class="navbar__back" aria-label="Back to threads">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+</a>
+{% endblock %}
+
+{% block navbar_title %}{{ address }}{% endblock %}
+
+{% block content %}
+<div class="conversation">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message-row {% if message.type == 2 %}message-row--out{% else %}message-row--in{% endif %}">
+                <div class="message-bubble">
+                    {{ message.body }}
+                    <span class="message-time">{{ message.date }}</span>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-center text-muted mt-24">No messages found.</p>
+    {% endif %}
+</div>
+{% endblock %}

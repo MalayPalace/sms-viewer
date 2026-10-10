@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Import Backup - SMS Viewer{% endblock %}
+
+{% block navbar_back %}
+<a href="{{ url_for('views.threads') }}" class="navbar__back" aria-label="Back to threads">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+</a>
+{% endblock %}
+
+{% block navbar_title %}Import Backup{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="card card--padded mb-16 animate-fade-in-up">
+        <h2 class="page-title">Upload SMS Backup</h2>
+        <p class="text-muted mb-16">Select an NDJSON or ZIP backup file to import messages into SMS Viewer.</p>
+        
+        <form id="import-form" enctype="multipart/form-data">
+            <div class="dropzone" id="import-dropzone" tabindex="0" role="button" aria-label="Upload backup file zone">
+                <div class="dropzone__icon">📁</div>
+                <h3 class="dropzone__title" id="dropzone-title">Drag &amp; Drop file here</h3>
+                <p class="dropzone__subtitle" id="dropzone-subtitle">or click to browse (.zip, .ndjson)</p>
+                <input type="file" id="import-file" name="file" class="sr-only" accept=".zip,.ndjson,.json">
+            </div>
+
+            <div id="file-info" class="mt-16 text-center" style="display: none;">
+                <span class="badge badge--primary" id="selected-filename">filename.zip</span>
+                <span class="text-muted text-sm ml-8" id="selected-filesize">(0 KB)</span>
+            </div>
+
+            <div id="import-actions" class="mt-16 text-center" style="display: none;">
+                <button type="submit" class="btn btn--primary" id="import-btn">
+                    <span id="import-btn-text">Start Import</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Status / Alert message -->
+        <div id="import-status" class="mt-16" style="display: none;"></div>
+
+        <!-- Metrics card -->
+        <div id="import-metrics" class="card card--outlined mt-16 p-16" style="display: none;">
+            <h4 class="mb-12 text-primary" style="font-weight: 600;">Import Result Summary</h4>
+            <div class="metrics-grid">
+                <div class="metric-box">
+                    <span class="metric-box__value" id="metric-total">0</span>
+                    <span class="metric-box__label">Total Processed</span>
+                </div>
+                <div class="metric-box metric-box--success">
+                    <span class="metric-box__value" id="metric-imported">0</span>
+                    <span class="metric-box__label">New Imported</span>
+                </div>
+                <div class="metric-box metric-box--warning">
+                    <span class="metric-box__value" id="metric-skipped">0</span>
+                    <span class="metric-box__label">Skipped / Duplicates</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Log History -->
+    <div class="card card--padded mb-16 animate-fade-in-up" style="animation-delay: 0.1s;">
+        <h3 class="card__title mb-16">Import History</h3>
+        <div class="table-responsive">
+            <table class="data-table" id="history-table">
+                <thead>
+                    <tr>
+                        <th>Date &amp; Time</th>
+                        <th>Filename</th>
+                        <th>Total</th>
+                        <th>Imported</th>
+                        <th>Skipped</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody">
+                    {% if import_log %}
+                        {% for log in import_log %}
+                        <tr>
+                            <td>{{ log.imported_at }}</td>
+                            <td><code>{{ log.filename }}</code></td>
+                            <td>{{ log.records_total }}</td>
+                            <td><span class="badge badge--success">+{{ log.records_imported }}</span></td>
+                            <td><span class="badge badge--secondary">{{ log.records_skipped }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr id="no-history-row">
+                            <td colspan="5" class="text-center text-muted py-16">No previous imports recorded.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const dropzone = document.getElementById('import-dropzone');
+    const fileInput = document.getElementById('import-file');
+    const fileInfo = document.getElementById('file-info');
+    const selectedFilename = document.getElementById('selected-filename');
+    const selectedFilesize = document.getElementById('selected-filesize');
+    const importActions = document.getElementById('import-actions');
+    const importForm = document.getElementById('import-form');
+    const importBtn = document.getElementById('import-btn');
+    const importBtnText = document.getElementById('import-btn-text');
+    const importStatus = document.getElementById('import-status');
+    const importMetrics = document.getElementById('import-metrics');
+    const metricTotal = document.getElementById('metric-total');
+    const metricImported = document.getElementById('metric-imported');
+    const metricSkipped = document.getElementById('metric-skipped');
+
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function handleFile(file) {
+        if (!file) return;
+        selectedFilename.textContent = file.name;
+        selectedFilesize.textContent = `(${formatBytes(file.size)})`;
+        fileInfo.style.display = 'block';
+        importActions.style.display = 'block';
+        importStatus.style.display = 'none';
+        importMetrics.style.display = 'none';
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInput.click();
+        }
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('dropzone--active');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dropzone--active');
+        }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFile(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            handleFile(fileInput.files[0]);
+        }
+    });
+
+    importForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!fileInput.files || fileInput.files.length === 0) return;
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        importBtn.disabled = true;
+        importBtnText.textContent = 'Importing...';
+        importStatus.style.display = 'block';
+        importStatus.className = 'mt-16 alert alert--info';
+        importStatus.textContent = 'Processing backup file. Please wait...';
+
+        try {
+            const resp = await fetch('/api/import', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await resp.json();
+
+            if (!resp.ok || data.error) {
+                importStatus.className = 'mt-16 alert alert--danger';
+                importStatus.textContent = data.error || 'Import failed.';
+                importBtn.disabled = false;
+                importBtnText.textContent = 'Retry Import';
+                return;
+            }
+
+            importStatus.className = 'mt-16 alert alert--success';
+            importStatus.textContent = `Successfully processed ${data.filename}!`;
+
+            metricTotal.textContent = data.records_total.toLocaleString();
+            metricImported.textContent = data.records_imported.toLocaleString();
+            metricSkipped.textContent = data.records_skipped.toLocaleString();
+            importMetrics.style.display = 'block';
+
+            importBtn.disabled = false;
+            importBtnText.textContent = 'Import Another File';
+
+            // Refresh history table
+            loadHistory();
+
+        } catch (err) {
+            importStatus.className = 'mt-16 alert alert--danger';
+            importStatus.textContent = 'Network or server error occurred: ' + err.message;
+            importBtn.disabled = false;
+            importBtnText.textContent = 'Retry Import';
+        }
+    });
+
+    async function loadHistory() {
+        try {
+            const res = await fetch('/api/import/history');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.history) return;
+
+            const tbody = document.getElementById('history-tbody');
+            if (data.history.length === 0) {
+                tbody.innerHTML = '<tr id="no-history-row"><td colspan="5" class="text-center text-muted py-16">No previous imports recorded.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.history.map(row => `
+                <tr>
+                    <td>${row.imported_at}</td>
+                    <td><code>${row.filename}</code></td>
+                    <td>${row.records_total}</td>
+                    <td><span class="badge badge--success">+${row.records_imported}</span></td>
+                    <td><span class="badge badge--secondary">${row.records_skipped}</span></td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            console.error('Failed to reload history:', e);
+        }
+    }
+});
+</script>
+{% endblock %}

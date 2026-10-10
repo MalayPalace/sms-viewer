@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Search - SMS Viewer{% endblock %}
+
+{% block navbar_back %}
+<a href="{{ url_for('views.threads') }}" class="navbar__back" aria-label="Back to threads">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+</a>
+{% endblock %}
+
+{% block navbar_title %}Search Results{% endblock %}
+
+{% block content %}
+<div class="search-bar">
+    <div class="search-input-wrap">
+        <span class="search-input-wrap__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </span>
+        <input type="text" id="search-input" class="search-input" placeholder="Search messages..." value="{{ query }}" autocomplete="off">
+    </div>
+</div>
+
+<div class="search-results">
+    {% if results %}
+        {% for result in results %}
+            <!-- Phase 4 search results will go here -->
+        {% endfor %}
+    {% else %}
+        <p class="text-center text-muted mt-24">No results found.</p>
+    {% endif %}
+</div>
+{% endblock %}

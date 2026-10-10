@@ -1,0 +1,7 @@
+graft src/sms_viewer/templates
+graft src/sms_viewer/static
+global-exclude *.py[cod]
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store
+global-exclude *.egg-info

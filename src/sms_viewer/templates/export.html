@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Export - SMS Viewer{% endblock %}
+
+{% block navbar_back %}
+<a href="{{ url_for('views.threads') }}" class="navbar__back" aria-label="Back to threads">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+</a>
+{% endblock %}
+
+{% block navbar_title %}Export Data{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="card card--padded">
+        <h2 class="page-title">Export Messages</h2>
+        <p class="text-muted mb-16">Export your data to a JSON file based on a date range.</p>
+        
+        <form class="export-form">
+            <div class="date-range">
+                <div class="form-group">
+                    <label class="form-label" for="export-from">From Date</label>
+                    <input type="date" class="form-input" id="export-from">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="export-to">To Date</label>
+                    <input type="date" class="form-input" id="export-to">
+                </div>
+            </div>
+            
+            <button type="button" class="btn btn--primary mt-16" disabled>Export JSON</button>
+            
+            <!-- Placeholder for phase 5 -->
+            <p class="text-center text-muted mt-8" style="font-size: 0.8rem">Export functionality will be implemented in Phase 5.</p>
+        </form>
+    </div>
+</div>
+{% endblock %}
