@@ -60,21 +60,29 @@ sms-viewer/
 ├── MANIFEST.in                     # sdist inclusion rules
 ├── README.md                       # Project documentation
 ├── docs/
-│   └── implementation_plan_2026-09-12.md   # This file
+│   └── implementation_plan_2026-09-12.md   # Implementation plan
 ├── src/
 │   └── sms_viewer/
 │       ├── __init__.py             # Package version
 │       ├── app.py                  # Flask application factory
 │       ├── cli.py                  # CLI entry point (sms-viewer command)
-│       ├── config.py               # Configuration management
-│       ├── db.py                   # SQLite connection, init, migrations
-│       ├── auth.py                 # Authentication blueprint
-│       ├── views.py                # Main views blueprint (threads, messages)
-│       ├── api.py                  # API blueprint (search, import, export)
-│       ├── importer.py             # ZIP/NDJSON import + deduplication logic
-│       ├── exporter.py             # JSON export with date filtering
-│       ├── recognizer.py           # Entity recognition (URL, email, phone, OTP)
-│       ├── search.py               # FTS5 search integration
+│       ├── database/               # Database Layer
+│       │   ├── __init__.py
+│       │   ├── db.py               # Path resolution, init_db, schema migration
+│       │   └── db_helper.py        # Central DatabaseHelper class for all DB queries & bulk inserts
+│       ├── feature/                # Feature Modules Layer
+│       │   ├── __init__.py
+│       │   ├── importer.py         # ZIP/NDJSON import pipeline (uses db_helper)
+│       │   ├── exporter.py         # JSON export module (uses db_helper)
+│       │   ├── recognizer.py       # Entity recognition (URL, email, phone, OTP)
+│       │   └── search.py           # FTS5 search engine (uses db_helper)
+│       ├── rest/                   # REST API & Auth Layer
+│       │   ├── __init__.py
+│       │   ├── api.py              # REST API blueprint routes
+│       │   └── auth.py             # Auth blueprint routes & login_required decorator
+│       ├── views/                  # HTML Views Layer
+│       │   ├── __init__.py
+│       │   └── views.py            # Page views blueprint routes
 │       ├── static/
 │       │   ├── css/
 │       │   │   └── style.css       # Material Design 3 inspired styles

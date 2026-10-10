@@ -1,9 +1,8 @@
 """
 Flask application factory for SMS Viewer.
 
-All configuration lives here. Blueprints are registered as they are
-implemented in later phases. Phase 1 wires up the DB teardown and
-exposes a minimal health-check route so the server can be verified.
+Configures application settings, initializes database schemas, and registers blueprints
+from rest and views subpackages.
 """
 
 import os
@@ -12,9 +11,8 @@ from pathlib import Path
 
 from flask import Flask, render_template
 
-from sms_viewer.api import api_bp
-from sms_viewer.auth import auth_bp
-from sms_viewer.db import close_db, init_db, resolve_db_path
+from sms_viewer.database import close_db, init_db, resolve_db_path
+from sms_viewer.rest import api_bp, auth_bp
 from sms_viewer.views import views_bp
 
 
@@ -30,18 +28,16 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     secret_key:
         Flask secret key for session signing. When *None* it is read from
         ``SMS_VIEWER_SECRET`` env var; if that is also absent a random key
-        is generated (non-persistent across restarts — fine for dev, but
-        set the env var for production so sessions survive server restarts).
+        is generated (non-persistent across restarts).
     """
     app = Flask(__name__)
 
     # ------------------------------------------------------------------
     # Configuration
     # ------------------------------------------------------------------
-    # Use the path as-is if already resolved by the caller (CLI), otherwise
-    # fall back to resolving from env var / default location.
-    # resolved_db: Path = db_path if db_path is not None else resolve_db_path()
-    app.config["DATABASE_PATH"] = db_path
+    resolved_db: Path = db_path if db_path is not None else resolve_db_path()
+    app.config["DATABASE_PATH"] = resolved_db
+    app.config["DB_PATH"] = resolved_db
 
     # Secret key — used to sign session cookies
     _secret = (
@@ -54,9 +50,9 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     # ------------------------------------------------------------------
     # Database initialisation
     # ------------------------------------------------------------------
-    init_db(db_path)
+    init_db(resolved_db)
 
-    # Register DB connection teardown for every request context
+    # Register DB connection teardown for request context
     app.teardown_appcontext(close_db)
 
     # ------------------------------------------------------------------
@@ -72,7 +68,7 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     @app.route("/health")
     def health():  # noqa: ANN202
         """Lightweight health-check endpoint."""
-        return {"status": "ok", "db": str(db_path)}, 200
+        return {"status": "ok", "db": str(resolved_db)}, 200
 
     # ------------------------------------------------------------------
     # Error handlers

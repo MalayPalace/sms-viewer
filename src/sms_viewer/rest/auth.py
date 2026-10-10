@@ -1,18 +1,24 @@
 """
 Authentication blueprint for SMS Viewer.
 
-Phase 5 will implement the full login/logout/setup flow.
-This stub registers the blueprint so the app factory can import it from Phase 1.
+Provides setup, login, logout routes and login_required authorization wrapper
+using DatabaseHelper for authentication queries.
 """
 
 from functools import wraps
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from sms_viewer.db import get_db, has_any_user
+from sms_viewer.database.db_helper import DatabaseHelper
 
 auth_bp = Blueprint("auth", __name__)
+
+
+def _get_db_helper() -> DatabaseHelper:
+    """Obtain DatabaseHelper for current application configuration."""
+    path = current_app.config.get("DATABASE_PATH") or current_app.config.get("DB_PATH")
+    return DatabaseHelper(path)
 
 
 # ---------------------------------------------------------------------------
@@ -36,11 +42,10 @@ def login_required(f):
 @auth_bp.route("/setup", methods=["GET", "POST"])
 def setup():
     """First-run setup: create the initial user account."""
-    from flask import current_app  # noqa: PLC0415
-    db_path = current_app.config["DATABASE_PATH"]
+    db_helper = _get_db_helper()
 
     # If a user already exists, skip setup
-    if has_any_user(db_path):
+    if db_helper.has_any_user():
         return redirect(url_for("auth.login"))
 
     error = None
@@ -58,13 +63,8 @@ def setup():
         elif password != confirm:
             error = "Passwords do not match."
         else:
-            db = get_db(db_path)
             try:
-                db.execute(
-                    "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                    (username, generate_password_hash(password)),
-                )
-                db.commit()
+                db_helper.create_user(username, generate_password_hash(password))
                 flash("Account created! Please log in.", "success")
                 return redirect(url_for("auth.login"))
             except Exception:  # noqa: BLE001
@@ -76,11 +76,10 @@ def setup():
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     """Log in with username and password."""
-    from flask import current_app  # noqa: PLC0415
-    db_path = current_app.config["DATABASE_PATH"]
+    db_helper = _get_db_helper()
 
     # Redirect to setup if no user exists yet
-    if not has_any_user(db_path):
+    if not db_helper.has_any_user():
         return redirect(url_for("auth.setup"))
 
     # Already logged in
@@ -92,11 +91,7 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
-        db = get_db(db_path)
-        user = db.execute(
-            "SELECT id, password_hash FROM users WHERE username = ?",
-            (username,),
-        ).fetchone()
+        user = db_helper.get_user_by_username(username)
 
         if user is None or not check_password_hash(user["password_hash"], password):
             error = "Invalid username or password."

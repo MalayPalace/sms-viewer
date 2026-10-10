@@ -211,27 +211,10 @@ def init_db(db_path: Path) -> None:
 
 
 def _migrate(conn: sqlite3.Connection) -> None:
-    """Apply any pending schema migrations.
-
-    Each migration is guarded by a version check and is idempotent.
-    Add new ``elif version == N:`` blocks here as the schema evolves.
-    """
+    """Apply any pending schema migrations."""
     cur = conn.execute("SELECT version FROM schema_version LIMIT 1")
     row = cur.fetchone()
     if row is None:
         return
     version = row[0]
-
-    # Example: if version == 1: apply migration to version 2, bump version
-    #TODO: (No migrations needed yet — schema is at v1.)
-    _ = version  # suppress unused-variable warning
-
-
-def has_any_user(db_path: Path) -> bool:
-    """Return True if at least one user account exists in the database."""
-    conn = sqlite3.connect(db_path)
-    try:
-        cur = conn.execute("SELECT COUNT(*) FROM users")
-        return cur.fetchone()[0] > 0
-    finally:
-        conn.close()
+    _ = version

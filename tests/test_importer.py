@@ -1,17 +1,17 @@
 """
-Unit and integration tests for Phase 2: Importer and Import API.
+Unit and integration tests for DatabaseHelper, Importer, and Import API.
 """
 
 import json
 import sqlite3
-import tempfile
 import zipfile
 from pathlib import Path
 import pytest
 
 from sms_viewer.app import create_app
-from sms_viewer.db import init_db
-from sms_viewer.importer import import_backup_file, get_import_history
+from sms_viewer.database.db import init_db
+from sms_viewer.database.db_helper import DatabaseHelper
+from sms_viewer.feature.importer import get_import_history, import_backup_file
 
 
 @pytest.fixture
@@ -73,6 +73,19 @@ def sample_zip(tmp_path, sample_ndjson):
     return zip_path
 
 
+def test_db_helper_operations(temp_db):
+    db_helper = DatabaseHelper(temp_db)
+    assert db_helper.has_any_user() is False
+
+    uid = db_helper.create_user("admin", "hashed_pass")
+    assert uid > 0
+    assert db_helper.has_any_user() is True
+
+    user = db_helper.get_user_by_username("admin")
+    assert user is not None
+    assert user["username"] == "admin"
+
+
 def test_import_ndjson(temp_db, sample_ndjson):
     res = import_backup_file(sample_ndjson, sample_ndjson.name, temp_db)
     assert res["success"] is True
@@ -80,11 +93,10 @@ def test_import_ndjson(temp_db, sample_ndjson):
     assert res["records_imported"] == 3
     assert res["records_skipped"] == 0
 
-    # Verify rows in DB
-    conn = sqlite3.connect(temp_db)
-    cur = conn.execute("SELECT COUNT(*) FROM messages")
-    assert cur.fetchone()[0] == 3
-    conn.close()
+    # Verify rows via DatabaseHelper
+    db_helper = DatabaseHelper(temp_db)
+    threads = db_helper.get_threads()
+    assert len(threads) == 2  # 2 addresses: +1234567890 and HDFCBK
 
 
 def test_import_deduplication(temp_db, sample_ndjson):
@@ -110,12 +122,10 @@ def test_import_zip(temp_db, sample_zip):
     assert res["records_total"] == 3
     assert res["records_imported"] == 3
 
-    conn = sqlite3.connect(temp_db)
-    cur = conn.execute("SELECT address, body FROM messages WHERE address = 'HDFCBK'")
-    row = cur.fetchone()
-    assert row is not None
-    assert "INR 500.00 debited" in row[1]
-    conn.close()
+    db_helper = DatabaseHelper(temp_db)
+    messages = db_helper.get_messages_by_address("HDFCBK")
+    assert len(messages) == 1
+    assert "INR 500.00 debited" in messages[0]["body"]
 
 
 def test_api_import_endpoint(temp_db, sample_zip):
@@ -123,7 +133,6 @@ def test_api_import_endpoint(temp_db, sample_zip):
     app.config["TESTING"] = True
     client = app.test_client()
 
-    # Log in first (bypass or create user)
     with client.session_transaction() as sess:
         sess["user_id"] = 1
         sess["username"] = "testuser"

@@ -7,7 +7,7 @@ Provides RESTful JSON endpoints for import, export, thread pagination, message l
 from pathlib import Path
 from flask import Blueprint, current_app, jsonify, request
 
-from sms_viewer.importer import get_import_history, import_backup_file
+from sms_viewer.feature.importer import get_import_history, import_backup_file
 
 api_bp = Blueprint("api", __name__)
 

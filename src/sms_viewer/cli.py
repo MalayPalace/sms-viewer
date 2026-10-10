@@ -19,7 +19,7 @@ from threading import Timer
 import click
 
 from sms_viewer.app import create_app
-from sms_viewer.db import resolve_db_path
+from sms_viewer.database import resolve_db_path
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
