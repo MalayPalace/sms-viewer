@@ -8,7 +8,7 @@ and import logging across all modules.
 
 import sqlite3
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 
 class DatabaseHelper:
@@ -113,33 +113,76 @@ class DatabaseHelper:
     # Views / Query operations
     # -----------------------------------------------------------------------
 
-    def get_threads(self) -> list[dict[str, Any]]:
-        """Retrieve thread summaries grouped by address sorted by latest message date."""
+    def get_threads(self, limit: int | None = None, offset: int = 0) -> list[dict[str, Any]]:
+        """Retrieve thread summaries grouped by address sorted by latest message date.
+
+        Supports optional pagination via limit and offset.
+        """
+        query = """
+            SELECT
+                address,
+                MAX(date)  AS latest_date,
+                COUNT(*)   AS message_count,
+                SUM(CASE WHEN read = 0 THEN 1 ELSE 0 END) AS unread_count,
+                (
+                    SELECT body FROM messages m2
+                    WHERE m2.address = messages.address
+                    ORDER BY m2.date DESC LIMIT 1
+                ) AS last_body,
+                (
+                    SELECT type FROM messages m2
+                    WHERE m2.address = messages.address
+                    ORDER BY m2.date DESC LIMIT 1
+                ) AS last_type
+            FROM messages
+            GROUP BY address
+            ORDER BY latest_date DESC
+        """
+        params: list[Any] = []
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+
         with self.get_connection() as conn:
-            cur = conn.execute("""
-                SELECT
-                    address,
-                    MAX(date)  AS latest_date,
-                    COUNT(*)   AS message_count,
-                    (
-                        SELECT body FROM messages m2
-                        WHERE m2.address = messages.address
-                        ORDER BY m2.date DESC LIMIT 1
-                    ) AS last_body
-                FROM messages
-                GROUP BY address
-                ORDER BY latest_date DESC
-            """)
+            cur = conn.execute(query, params)
             return [dict(row) for row in cur.fetchall()]
 
-    def get_messages_by_address(self, address: str) -> list[dict[str, Any]]:
+    def get_threads_count(self) -> int:
+        """Return total number of unique conversation threads."""
+        with self.get_connection() as conn:
+            cur = conn.execute("SELECT COUNT(DISTINCT address) FROM messages")
+            return cur.fetchone()[0]
+
+    def get_messages_by_address(
+        self, address: str, limit: int | None = None, offset: int = 0
+    ) -> list[dict[str, Any]]:
         """Retrieve all messages for a given sender/address ordered chronologically."""
+        query = "SELECT * FROM messages WHERE address = ? ORDER BY date ASC"
+        params: list[Any] = [address]
+        if limit is not None:
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+
+        with self.get_connection() as conn:
+            cur = conn.execute(query, params)
+            return [dict(row) for row in cur.fetchall()]
+
+    def get_messages_count_by_address(self, address: str) -> int:
+        """Return total number of messages for a given address."""
         with self.get_connection() as conn:
             cur = conn.execute(
-                "SELECT * FROM messages WHERE address = ? ORDER BY date ASC",
-                (address,),
+                "SELECT COUNT(*) FROM messages WHERE address = ?", [address]
             )
-            return [dict(row) for row in cur.fetchall()]
+            return cur.fetchone()[0]
+
+    def mark_thread_read(self, address: str) -> int:
+        """Mark unread messages in a thread as read. Returns number of updated messages."""
+        with self.get_connection() as conn:
+            cur = conn.execute(
+                "UPDATE messages SET read = 1 WHERE address = ? AND read = 0", [address]
+            )
+            conn.commit()
+            return cur.rowcount if cur.rowcount >= 0 else 0
 
 
 # ---------------------------------------------------------------------------

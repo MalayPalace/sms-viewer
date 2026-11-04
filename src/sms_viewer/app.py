@@ -14,6 +14,7 @@ from flask import Flask, render_template
 from sms_viewer.database import close_db, init_db, resolve_db_path
 from sms_viewer.rest import api_bp, auth_bp
 from sms_viewer.views import views_bp
+from sms_viewer.utils import avatar_color_index, avatar_initial, format_date_label, format_time, format_timestamp
 
 
 def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Flask:
@@ -61,6 +62,15 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     app.register_blueprint(auth_bp)
     app.register_blueprint(views_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
+
+    # ------------------------------------------------------------------
+    # Template filters
+    # ------------------------------------------------------------------
+    app.template_filter("format_timestamp")(format_timestamp)
+    app.template_filter("format_time")(format_time)
+    app.template_filter("format_date_label")(format_date_label)
+    app.template_filter("avatar_color_index")(avatar_color_index)
+    app.template_filter("avatar_initial")(avatar_initial)
 
     # ------------------------------------------------------------------
     # Health-check endpoint
