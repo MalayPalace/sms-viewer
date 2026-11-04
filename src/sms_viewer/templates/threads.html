@@ -1,46 +1,73 @@
 {% extends "base.html" %}
 
+{% block title %}Messages - SMS Viewer{% endblock %}
+
 {% block content %}
 <div class="search-bar">
     <div class="search-input-wrap">
         <span class="search-input-wrap__icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </span>
-        <input type="text" id="search-input" class="search-input" placeholder="Search messages..." autocomplete="off">
+        <input type="text" id="search-input" class="search-input" placeholder="Search conversations or senders..." autocomplete="off" aria-label="Search conversations">
         <button type="button" id="search-clear" class="search-input-clear" aria-label="Clear search">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
     </div>
 </div>
 
-<ul class="thread-list">
+<ul class="thread-list" id="thread-list">
     {% if threads %}
         {% for thread in threads %}
-            <!-- Stub thread row -->
-            <li class="thread-item">
-                <div class="thread-avatar avatar-color-{{ loop.index0 % 8 }}">{{ thread.address[0]|upper }}</div>
-                <div class="thread-info">
-                    <div class="thread-header">
-                        <span class="thread-name">{{ thread.address }}</span>
-                        <span class="thread-time">{{ thread.latest_date }}</span>
+            <li>
+                <a href="{{ url_for('views.conversation', address=thread.address) }}" class="thread-item {% if thread.unread_count and thread.unread_count > 0 %}thread-item--unread{% endif %}" data-address="{{ thread.address|lower }}" data-body="{{ thread.last_body|lower }}">
+                    <div class="thread-avatar avatar-color-{{ thread.address | avatar_color_index }}" aria-hidden="true">
+                        {{ thread.address | avatar_initial }}
                     </div>
-                    <div class="thread-preview">{{ thread.last_body }}</div>
-                </div>
-                <div class="thread-meta">
-                    <span class="thread-badge">{{ thread.message_count }}</span>
-                </div>
+                    <div class="thread-info">
+                        <div class="thread-header">
+                            <span class="thread-name">{{ thread.address }}</span>
+                            <span class="thread-time">{{ thread.latest_date | format_timestamp }}</span>
+                        </div>
+                        <div class="thread-preview">
+                            {% if thread.last_type == 2 %}<span class="thread-preview__prefix">You: </span>{% endif %}{{ thread.last_body }}
+                        </div>
+                    </div>
+                    <div class="thread-meta">
+                        {% if thread.unread_count and thread.unread_count > 0 %}
+                            <span class="thread-badge thread-badge--unread" title="{{ thread.unread_count }} unread">{{ thread.unread_count }}</span>
+                        {% else %}
+                            <span class="thread-badge" title="{{ thread.message_count }} messages">{{ thread.message_count }}</span>
+                        {% endif %}
+                    </div>
+                </a>
             </li>
         {% endfor %}
     {% else %}
-        <li class="thread-empty">
+        <li class="thread-empty" id="thread-empty-state">
             <div class="thread-empty__icon">💬</div>
             <h2 class="thread-empty__title">No messages yet</h2>
-            <p>Import a backup to get started.</p>
+            <p class="text-muted mb-16">Import an SMS backup file (.zip or .ndjson) to view your conversation threads.</p>
+            <a href="{{ url_for('views.import_page') }}" class="btn btn--primary" style="display: inline-flex; width: auto;">Import SMS Backup</a>
         </li>
     {% endif %}
 </ul>
 
-<a href="{{ url_for('views.import_page') }}" class="fab" aria-label="Import messages">
+<div id="search-no-results" class="thread-empty" style="display: none;">
+    <div class="thread-empty__icon">🔍</div>
+    <h2 class="thread-empty__title">No matching conversations</h2>
+    <p class="text-muted">No conversations found matching your search term.</p>
+</div>
+
+{% if has_more %}
+<div class="text-center py-16" id="pagination-wrap">
+    <button type="button" class="btn btn--outlined" id="load-more-btn" data-page="1">
+        <span id="load-more-text">Load More Conversations</span>
+    </button>
+</div>
+{% endif %}
+
+<!-- FAB button to jump to import -->
+<a href="{{ url_for('views.import_page') }}" class="fab" aria-label="Import backup" title="Import backup">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
 </a>
 {% endblock %}

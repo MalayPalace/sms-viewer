@@ -448,13 +448,15 @@ sms-viewer --help
 5. Implement import log tracking
 6. Test with provided sample data
 
-### Phase 3: Thread Views & UI
-1. Implement thread list view — query, group by address, sort by latest
-2. Implement conversation detail view — chronological messages with bubbles
-3. Create responsive CSS for both views
-4. Implement infinite scroll / pagination
-5. Add date separators in conversation view
-6. Polish Material Design 3 aesthetics, animations, transitions
+### Phase 3: Thread Views & UI ✅ COMPLETE
+1. ✅ Implement thread list view — query, group by address, sort by latest
+2. ✅ Implement conversation detail view — chronological messages with bubbles
+3. ✅ Create responsive CSS for both views
+4. ✅ Implement infinite scroll / pagination (client-side + API)
+5. ✅ Add date separators in conversation view
+6. ✅ Polish Material Design 3 aesthetics, animations, transitions
+7. ✅ Automated tests: 7/7 passing (`tests/test_views.py`)
+8. ✅ Wheel built and verified: `sms_viewer-0.1.0-py3-none-any.whl`
 
 ### Phase 4: Search & Entity Recognition
 1. Set up FTS5 virtual table and sync triggers

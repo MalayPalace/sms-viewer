@@ -221,6 +221,28 @@ img { max-width: 100%; display: block; }
   text-overflow: ellipsis;
 }
 
+.navbar__conversation-title {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.navbar__address {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.navbar__subtitle {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  line-height: 1.2;
+}
+
 .navbar__actions {
   display: flex;
   align-items: center;
@@ -431,6 +453,19 @@ img { max-width: 100%; display: block; }
   line-height: 1.4;
 }
 
+.thread-preview__prefix {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.thread-item--unread .thread-name {
+  font-weight: 700;
+}
+.thread-item--unread .thread-preview {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
 .thread-meta {
   display: flex;
   flex-direction: column;
@@ -451,6 +486,12 @@ img { max-width: 100%; display: block; }
   color: var(--badge-text);
   font-size: 0.6875rem;
   font-weight: 600;
+}
+
+.thread-badge--unread {
+  background-color: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: 0 1px 4px var(--shadow-md);
 }
 
 .thread-empty {
@@ -522,12 +563,24 @@ img { max-width: 100%; display: block; }
   border-bottom-right-radius: var(--radius-sm);
 }
 
-.message-time {
-  display: block;
-  font-size: 0.7rem;
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
   margin-top: 4px;
-  opacity: 0.65;
-  text-align: right;
+}
+
+.message-time {
+  display: inline-block;
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.message-status {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.85;
 }
 
 /* Consecutive bubble spacing */
@@ -1066,6 +1119,7 @@ mark {
 .gap-12 { gap: 12px; }
 .flex-1 { flex: 1; }
 .w-full { width: 100%; }
+.py-16 { padding-top: 16px; padding-bottom: 16px; }
 
 /* -------------------------------------------------------------------------
    Responsive — Tablet (≥ 640px)

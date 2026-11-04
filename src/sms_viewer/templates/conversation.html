@@ -3,26 +3,73 @@
 {% block title %}{{ address }} - SMS Viewer{% endblock %}
 
 {% block navbar_back %}
-<a href="{{ url_for('views.threads') }}" class="navbar__back" aria-label="Back to threads">
+<a href="{{ url_for('views.threads') }}" class="navbar__back" aria-label="Back to threads" title="Back to conversations">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
 </a>
 {% endblock %}
 
-{% block navbar_title %}{{ address }}{% endblock %}
+{% block navbar_title %}
+<div class="navbar__conversation-title">
+    <div class="navbar__address">{{ address }}</div>
+    <div class="navbar__subtitle">{{ total_count }} message{% if total_count != 1 %}s{% endif %}</div>
+</div>
+{% endblock %}
+
+{% block navbar_actions %}
+<div class="navbar__actions">
+    <!-- Theme Toggle inherited from base if needed, or back to base -->
+    {{ super() }}
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="conversation">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="message-row {% if message.type == 2 %}message-row--out{% else %}message-row--in{% endif %}">
-                <div class="message-bubble">
-                    {{ message.body }}
-                    <span class="message-time">{{ message.date }}</span>
-                </div>
+<div class="conversation" id="conversation-container">
+    {% if date_groups %}
+        {% for date_label, msgs in date_groups %}
+            <!-- Date Separator -->
+            <div class="date-separator">
+                <span class="date-separator__label">{{ date_label }}</span>
             </div>
+
+            <!-- Messages for this day -->
+            {% for message in msgs %}
+                <div class="message-row {% if message.type == 2 %}message-row--out{% else %}message-row--in{% endif %}" id="msg-{{ message.id }}">
+                    <div class="message-bubble">
+                        <div class="message-text">{{ message.body }}</div>
+                        <div class="message-meta">
+                            <span class="message-time">{{ message.date | format_time }}</span>
+                            {% if message.type == 2 %}
+                                <span class="message-status" title="Sent">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
         {% endfor %}
+        <div id="bottom-anchor"></div>
     {% else %}
-        <p class="text-center text-muted mt-24">No messages found.</p>
+        <div class="thread-empty">
+            <div class="thread-empty__icon">💬</div>
+            <h2 class="thread-empty__title">No messages in thread</h2>
+            <p class="text-muted">No messages were found for this sender.</p>
+        </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Auto-scroll to the latest message at bottom of conversation
+    const container = document.getElementById('conversation-container');
+    const anchor = document.getElementById('bottom-anchor');
+    if (anchor) {
+        anchor.scrollIntoView({ behavior: 'auto' });
+    } else if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+});
+</script>
 {% endblock %}
