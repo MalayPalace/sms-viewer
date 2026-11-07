@@ -9,6 +9,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from sms_viewer.database.db_helper import DatabaseHelper
 from sms_viewer.feature.importer import get_import_history, import_backup_file
+from sms_viewer.feature.search import search_messages, search_messages_count
 from sms_viewer.utils import avatar_color_index, avatar_initial, format_time, format_timestamp
 
 api_bp = Blueprint("api", __name__)
@@ -43,8 +44,8 @@ def search():
         return jsonify({"results": [], "total": 0, "page": page, "limit": limit, "has_more": False, "query": ""})
 
     offset = (page - 1) * limit
-    raw_results = db_helper.search_messages(query=raw_q, limit=limit, offset=offset)
-    total = db_helper.search_messages_count(query=raw_q)
+    raw_results = search_messages(db_helper, query=raw_q, limit=limit, offset=offset)
+    total = search_messages_count(db_helper, query=raw_q)
 
     enriched = []
     for r in raw_results:

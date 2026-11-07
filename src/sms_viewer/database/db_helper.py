@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 
+
 class DatabaseHelper:
     """Central database helper class for executing SQLite queries and transactions."""
 
@@ -185,25 +186,63 @@ class DatabaseHelper:
             return cur.rowcount if cur.rowcount >= 0 else 0
 
     # -----------------------------------------------------------------------
-    # FTS5 Search operations
+    # FTS5 Search operations — raw DB query methods
+    # (called by feature/search.py after input sanitization)
     # -----------------------------------------------------------------------
 
-    def search_messages(
-            self, query: str, limit: int = 20, offset: int = 0
+    def fts_search(
+        self, safe_q: str, limit: int = 20, offset: int = 0
     ) -> list[dict[str, Any]]:
-        """Full-text search over messages using SQLite FTS5.
+        """Execute a sanitized FTS5 MATCH query and return raw result rows.
 
-        Delegates to :func:`sms_viewer.feature.search.search_messages`.
-        Returns enriched rows with a ``snippet`` field containing HTML
-        ``<mark>`` highlights around matched terms.
+        Each row contains all ``messages`` columns plus a ``snippet`` field
+        with ``<mark>`` tags around matched terms (from FTS5 ``highlight()``).
+
+        Args:
+            safe_q:  Pre-sanitized FTS5 MATCH expression from ``search.py``.
+            limit:   Maximum rows to return.
+            offset:  Row offset for pagination.
         """
-        from sms_viewer.feature.search import search_messages as _search
-        return _search(self, query=query, limit=limit, offset=offset)
+        sql = """
+            SELECT
+                m.id,
+                m.address,
+                m.date,
+                m.type,
+                m.read,
+                m.body,
+                highlight(messages_fts, 0, '<mark>', '</mark>') AS snippet
+            FROM messages_fts AS fts
+            JOIN messages AS m ON fts.rowid = m.id
+            WHERE messages_fts MATCH ?
+            ORDER BY rank
+            LIMIT ? OFFSET ?
+        """
+        try:
+            with self.get_connection() as conn:
+                cur = conn.execute(sql, (safe_q, limit, offset))
+                return [dict(row) for row in cur.fetchall()]
+        except sqlite3.OperationalError:
+            # Invalid FTS5 query syntax — return empty rather than 500
+            return []
 
-    def search_messages_count(self, query: str) -> int:
-        """Return total FTS5 match count for *query* (used for pagination)."""
-        from sms_viewer.feature.search import search_messages_count as _count
-        return _count(self, query=query)
+    def fts_count(self, safe_q: str) -> int:
+        """Return total FTS5 match count for a sanitized query expression.
+
+        Args:
+            safe_q: Pre-sanitized FTS5 MATCH expression from ``search.py``.
+        """
+        sql = """
+            SELECT COUNT(*)
+            FROM messages_fts AS fts
+            WHERE messages_fts MATCH ?
+        """
+        try:
+            with self.get_connection() as conn:
+                cur = conn.execute(sql, (safe_q,))
+                return cur.fetchone()[0]
+        except sqlite3.OperationalError:
+            return 0
 
 
 # ---------------------------------------------------------------------------

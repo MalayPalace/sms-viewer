@@ -167,34 +167,34 @@ class TestHighlightEntities:
 class TestSearchEngine:
     def test_search_finds_match(self, db_with_messages):
         db = DatabaseHelper(db_with_messages)
-        results = db.search_messages("OTP")
+        results = search_messages(db, "OTP")
         assert len(results) >= 1
         assert any("482910" in r["body"] for r in results)
 
     def test_search_snippet_has_mark_tag(self, db_with_messages):
         db = DatabaseHelper(db_with_messages)
-        results = db.search_messages("OTP")
+        results = search_messages(db, "OTP")
         assert any("<mark>" in r.get("snippet", "") for r in results)
 
     def test_search_prefix_match(self, db_with_messages):
         db = DatabaseHelper(db_with_messages)
-        results = db.search_messages("trans*")
+        results = search_messages(db, "trans*")
         assert len(results) >= 1
 
     def test_search_no_results_for_garbage(self, db_with_messages):
         db = DatabaseHelper(db_with_messages)
-        results = db.search_messages("xyzzy_nonexistent_word")
+        results = search_messages(db, "xyzzy_nonexistent_word")
         assert results == []
 
     def test_search_count_matches_results(self, db_with_messages):
         db = DatabaseHelper(db_with_messages)
-        total = db.search_messages_count("account")
-        results = db.search_messages("account", limit=50)
+        total = search_messages_count(db, "account")
+        results = search_messages(db, "account", limit=50)
         assert total == len(results)
 
     def test_search_empty_query_returns_empty(self, db_with_messages):
         db = DatabaseHelper(db_with_messages)
-        results = db.search_messages("")
+        results = search_messages(db, "")
         assert results == []
 
     def test_search_pagination(self, db_with_messages):
@@ -207,9 +207,9 @@ class TestSearchEngine:
             for i in range(10)
         ]
         db.bulk_insert_messages(extra)
-        total = db.search_messages_count("Keyword")
-        page1 = db.search_messages("Keyword", limit=5, offset=0)
-        page2 = db.search_messages("Keyword", limit=5, offset=5)
+        total = search_messages_count(db, "Keyword")
+        page1 = search_messages(db, "Keyword", limit=5, offset=0)
+        page2 = search_messages(db, "Keyword", limit=5, offset=5)
         assert total == 10
         assert len(page1) == 5
         assert len(page2) == 5
@@ -220,8 +220,8 @@ class TestSearchEngine:
 
     def test_invalid_fts_query_returns_empty(self, db_with_messages):
         db = DatabaseHelper(db_with_messages)
-        # Malformed FTS5 (unbalanced quote after sanitization would be caught)
-        results = db.search_messages("AND AND")  # bare operators are invalid in FTS5
+        # Malformed FTS5 (bare operators are invalid in FTS5)
+        results = search_messages(db, "AND AND")
         # Should not raise, just return empty
         assert isinstance(results, list)
 

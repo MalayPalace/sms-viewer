@@ -8,6 +8,7 @@ from pathlib import Path
 from flask import Blueprint, current_app, render_template, request
 
 from sms_viewer.database.db_helper import DatabaseHelper
+from sms_viewer.feature.search import search_messages, search_messages_count
 from sms_viewer.rest.auth import login_required
 from sms_viewer.utils import group_messages_by_date
 
@@ -78,8 +79,8 @@ def search():
     has_more = False
 
     if raw_q:
-        results = db_helper.search_messages(query=raw_q, limit=limit, offset=offset)
-        total = db_helper.search_messages_count(query=raw_q)
+        results = search_messages(db_helper, query=raw_q, limit=limit, offset=offset)
+        total = search_messages_count(db_helper, query=raw_q)
         has_more = (offset + len(results)) < total
 
     return render_template(

@@ -7,8 +7,6 @@ and column filters (body:OTP, address:HDFC).
 """
 
 import re
-import sqlite3
-from pathlib import Path
 from typing import Any
 
 
@@ -35,13 +33,13 @@ def sanitize_fts_query(raw: str) -> str:
 
     query = raw.strip()
 
-    # Remove SQL-dangerous chars: semicolons, null bytes
+    # Remove SQL-dangerous chars: semicolons, single-quotes, null bytes
     query = _UNSAFE.sub("", query)
     # Remove FTS5 structural chars that confuse the parser unless user
     # deliberately typed valid FTS5 syntax (we keep balanced quotes below)
     query = _SPECIAL_FTS.sub("", query)
 
-    # Ensure quotes are balanced; strip unpaired trailing quote
+    # Ensure double-quotes are balanced; strip unpaired trailing quote
     if query.count('"') % 2 != 0:
         query = query.rstrip('"')
 
@@ -49,7 +47,7 @@ def sanitize_fts_query(raw: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Search engine (stateless functions using DatabaseHelper)
+# Public search API — sanitizes input then delegates raw DB call to db_helper
 # ---------------------------------------------------------------------------
 
 def search_messages(
@@ -71,43 +69,17 @@ def search_messages(
     if not safe_q:
         return []
 
-    sql = """
-        SELECT
-            m.id,
-            m.address,
-            m.date,
-            m.type,
-            m.read,
-            m.body,
-            highlight(messages_fts, 0, '<mark>', '</mark>') AS snippet
-        FROM messages_fts
-        JOIN messages m ON messages_fts.rowid = m.id
-        WHERE messages_fts MATCH ?
-        ORDER BY rank
-        LIMIT ? OFFSET ?
-    """
-    try:
-        with db_helper.get_connection() as conn:
-            cur = conn.execute(sql, (safe_q, limit, offset))
-            return [dict(row) for row in cur.fetchall()]
-    except sqlite3.OperationalError:
-        # Invalid FTS5 query syntax — return empty rather than 500
-        return []
+    return db_helper.fts_search(safe_q=safe_q, limit=limit, offset=offset)
 
 
 def search_messages_count(db_helper: Any, query: str) -> int:
-    """Return total number of FTS5 matches for *query* (for pagination)."""
+    """Return total number of FTS5 matches for *query* (for pagination).
+
+    Sanitizes the query before passing to db_helper.
+    Returns 0 when query is empty or invalid.
+    """
     safe_q = sanitize_fts_query(query)
     if not safe_q:
         return 0
 
-    sql = """
-        SELECT COUNT(*) FROM messages_fts
-        WHERE messages_fts MATCH ?
-    """
-    try:
-        with db_helper.get_connection() as conn:
-            cur = conn.execute(sql, (safe_q,))
-            return cur.fetchone()[0]
-    except sqlite3.OperationalError:
-        return 0
+    return db_helper.fts_count(safe_q=safe_q)
