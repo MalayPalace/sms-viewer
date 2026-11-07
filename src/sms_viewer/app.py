@@ -15,6 +15,7 @@ from sms_viewer.database import close_db, init_db, resolve_db_path
 from sms_viewer.rest import api_bp, auth_bp
 from sms_viewer.views import views_bp
 from sms_viewer.utils import avatar_color_index, avatar_initial, format_date_label, format_time, format_timestamp
+from sms_viewer.feature.recognizer import highlight_entities
 
 
 def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Flask:
@@ -71,6 +72,7 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     app.template_filter("format_date_label")(format_date_label)
     app.template_filter("avatar_color_index")(avatar_color_index)
     app.template_filter("avatar_initial")(avatar_initial)
+    app.template_filter("highlight_entities")(highlight_entities)
 
     # ------------------------------------------------------------------
     # Health-check endpoint

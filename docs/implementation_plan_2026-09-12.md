@@ -458,13 +458,17 @@ sms-viewer --help
 7. ✅ Automated tests: 7/7 passing (`tests/test_views.py`)
 8. ✅ Wheel built and verified: `sms_viewer-0.1.0-py3-none-any.whl`
 
-### Phase 4: Search & Entity Recognition
-1. Set up FTS5 virtual table and sync triggers
-2. Implement search backend (query sanitization, pagination, highlighting)
-3. Create search UI with real-time results
-4. Implement entity recognizer (`recognizer.py`) — URL, email, phone, OTP
-5. Create Jinja2 filter for entity highlighting
-6. Add copy-to-clipboard functionality with visual feedback
+### Phase 4: Search & Entity Recognition ✅ COMPLETE
+1. ✅ FTS5 virtual table set up and sync triggers in place (`init_db`)
+2. ✅ Search backend: query sanitization, FTS5 MATCH, pagination, `<mark>` snippet highlighting (`feature/search.py`)
+3. ✅ Search UI: result cards with avatars, snippets, direction badges, pagination, FTS5 tips (`search_results.html`)
+4. ✅ Entity recognizer: URL, email, phone (≥7 digits), OTP-with-keyword, OTP-standalone (`feature/recognizer.py`)
+5. ✅ Jinja2 `highlight_entities` filter registered in `app.py`; applied to conversation bubbles
+6. ✅ Copy-to-clipboard via `data-copy` attribute on entity `<span>` elements; toast feedback
+7. ✅ `/api/search` endpoint with pagination + enriched fields (`rest/api.py`)
+8. ✅ SSR `/search` page view with query params + pagination context (`views/views.py`)
+9. ✅ Search icon added to navbar (`base.html`)
+10. ✅ Tests: 47/47 passing (`tests/test_search.py` + all prior tests)
 
 ### Phase 5: Authentication & Export
 1. Implement auth blueprint — setup, login, logout, session management

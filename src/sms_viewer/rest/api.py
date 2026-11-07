@@ -22,8 +22,47 @@ def _get_db_helper() -> DatabaseHelper:
 
 @api_bp.route("/search")
 def search():
-    """Full-text search API (Phase 4)."""
-    return jsonify({"results": [], "total": 0, "page": 1})
+    """Full-text search API — FTS5 paginated JSON results.
+
+    Query parameters:
+        q     : search query string (supports FTS5 syntax)
+        page  : 1-based page number (default 1)
+        limit : results per page, max 50 (default 20)
+    """
+    db_helper = _get_db_helper()
+    raw_q = request.args.get("q", "").strip()
+
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+        limit = min(50, max(1, int(request.args.get("limit", 20))))
+    except (ValueError, TypeError):
+        page = 1
+        limit = 20
+
+    if not raw_q:
+        return jsonify({"results": [], "total": 0, "page": page, "limit": limit, "has_more": False, "query": ""})
+
+    offset = (page - 1) * limit
+    raw_results = db_helper.search_messages(query=raw_q, limit=limit, offset=offset)
+    total = db_helper.search_messages_count(query=raw_q)
+
+    enriched = []
+    for r in raw_results:
+        item = dict(r)
+        item["formatted_time"] = format_timestamp(r.get("date"))
+        item["avatar_color"] = avatar_color_index(r.get("address", ""))
+        item["avatar_initial"] = avatar_initial(r.get("address", ""))
+        enriched.append(item)
+
+    has_more = (offset + len(enriched)) < total
+    return jsonify({
+        "results": enriched,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "has_more": has_more,
+        "query": raw_q,
+    })
 
 
 @api_bp.route("/threads", methods=["GET"])

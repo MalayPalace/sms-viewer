@@ -5,7 +5,7 @@ Provides page routes for thread list, conversation detail, search, import, and e
 """
 
 from pathlib import Path
-from flask import Blueprint, current_app, render_template
+from flask import Blueprint, current_app, render_template, request
 
 from sms_viewer.database.db_helper import DatabaseHelper
 from sms_viewer.rest.auth import login_required
@@ -61,9 +61,37 @@ def conversation(address: str):
 @views_bp.route("/search")
 @login_required
 def search():
-    """Search results page (Phase 4)."""
-    query = ""
-    return render_template("search_results.html", query=query, results=[])
+    """Full-text search results page."""
+    db_helper = _get_db_helper()
+    raw_q = request.args.get("q", "").strip()
+
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except (ValueError, TypeError):
+        page = 1
+
+    limit = 20
+    offset = (page - 1) * limit
+
+    results = []
+    total = 0
+    has_more = False
+
+    if raw_q:
+        results = db_helper.search_messages(query=raw_q, limit=limit, offset=offset)
+        total = db_helper.search_messages_count(query=raw_q)
+        has_more = (offset + len(results)) < total
+
+    return render_template(
+        "search_results.html",
+        query=raw_q,
+        results=results,
+        total=total,
+        page=page,
+        has_more=has_more,
+        prev_page=page - 1 if page > 1 else None,
+        next_page=page + 1 if has_more else None,
+    )
 
 
 @views_bp.route("/import")

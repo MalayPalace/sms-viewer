@@ -1,32 +1,165 @@
 {% extends "base.html" %}
 
-{% block title %}Search - SMS Viewer{% endblock %}
+{% block title %}{% if query %}{{ query }} — Search{% else %}Search{% endif %} - SMS Viewer{% endblock %}
 
 {% block navbar_back %}
-<a href="{{ url_for('views.threads') }}" class="navbar__back" aria-label="Back to threads">
+<a href="{{ url_for('views.threads') }}" class="navbar__back" aria-label="Back to conversations">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
 </a>
 {% endblock %}
 
-{% block navbar_title %}Search Results{% endblock %}
+{% block navbar_title %}Search Messages{% endblock %}
 
 {% block content %}
-<div class="search-bar">
+{# ── Search bar ─────────────────────────────────────────────────────────── #}
+<form method="get" action="{{ url_for('views.search') }}" class="search-bar" id="search-form" role="search">
     <div class="search-input-wrap">
-        <span class="search-input-wrap__icon">
+        <span class="search-input-wrap__icon" aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </span>
-        <input type="text" id="search-input" class="search-input" placeholder="Search messages..." value="{{ query }}" autocomplete="off">
+        <input
+            type="search"
+            id="search-query"
+            name="q"
+            class="search-input"
+            placeholder="Search messages, senders… (OTP*, &quot;phrase&quot;, word*)"
+            value="{{ query }}"
+            autocomplete="off"
+            autofocus
+            aria-label="Search messages"
+        >
+        {% if query %}
+        <button type="button" id="search-clear" class="search-input-clear" aria-label="Clear search"
+                onclick="document.getElementById('search-query').value=''; this.closest('form').submit();">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        {% endif %}
     </div>
-</div>
+    <p class="search-hint text-muted">
+        Tip: use <code>word*</code> for prefix, <code>"exact phrase"</code> for phrase, <code>address:HDFC</code> or <code>body:OTP</code> for column filters
+    </p>
+</form>
 
-<div class="search-results">
-    {% if results %}
-        {% for result in results %}
-            <!-- Phase 4 search results will go here -->
-        {% endfor %}
+{# ── Results area ────────────────────────────────────────────────────────── #}
+<div class="search-results" id="search-results" role="region" aria-label="Search results">
+
+    {% if query %}
+        {# ── Results header ── #}
+        <div class="search-results-header">
+            {% if total > 0 %}
+                <span class="search-results-count">
+                    {{ total }} result{% if total != 1 %}s{% endif %} for <strong>{{ query }}</strong>
+                </span>
+            {% else %}
+                <span class="search-results-count search-results-count--empty">
+                    No results for <strong>{{ query }}</strong>
+                </span>
+            {% endif %}
+        </div>
+
+        {% if results %}
+            <ul class="search-result-list" id="search-result-list">
+                {% for result in results %}
+                <li class="search-result-card" id="sr-{{ result.id }}">
+                    <a href="{{ url_for('views.conversation', address=result.address) }}" class="search-result-card__link">
+                        {# Avatar #}
+                        <div class="thread-avatar avatar-color-{{ result.address | avatar_color_index }}" aria-hidden="true">
+                            {{ result.address | avatar_initial }}
+                        </div>
+
+                        {# Card body #}
+                        <div class="search-result-card__body">
+                            <div class="search-result-card__header">
+                                <span class="search-result-card__address">{{ result.address }}</span>
+                                <span class="search-result-card__time">{{ result.date | format_timestamp }}</span>
+                            </div>
+
+                            {# Snippet with FTS5 highlights — already safe HTML from backend #}
+                            <div class="search-result-card__snippet">
+                                {% if result.snippet %}
+                                    {{ result.snippet | safe }}
+                                {% else %}
+                                    {{ result.body }}
+                                {% endif %}
+                            </div>
+
+                            <div class="search-result-card__meta">
+                                {% if result.type == 2 %}
+                                    <span class="search-result-card__direction search-result-card__direction--out">Sent</span>
+                                {% else %}
+                                    <span class="search-result-card__direction search-result-card__direction--in">Received</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+
+            {# ── Pagination ── #}
+            {% if prev_page or next_page %}
+            <nav class="search-pagination" aria-label="Search result pages">
+                {% if prev_page %}
+                <a href="{{ url_for('views.search', q=query, page=prev_page) }}" class="btn btn--outlined search-pagination__btn" id="search-prev">
+                    ← Previous
+                </a>
+                {% endif %}
+                <span class="search-pagination__info">Page {{ page }}</span>
+                {% if next_page %}
+                <a href="{{ url_for('views.search', q=query, page=next_page) }}" class="btn btn--outlined search-pagination__btn" id="search-next">
+                    Next →
+                </a>
+                {% endif %}
+            </nav>
+            {% endif %}
+
+        {% else %}
+            {# Empty state #}
+            <div class="thread-empty">
+                <div class="thread-empty__icon">🔍</div>
+                <h2 class="thread-empty__title">No matching messages</h2>
+                <p class="text-muted">
+                    Try different keywords, use <code>word*</code> for prefix matching,
+                    or check the sender with <code>address:name</code>.
+                </p>
+            </div>
+        {% endif %}
+
     {% else %}
-        <p class="text-center text-muted mt-24">No results found.</p>
+        {# Idle state — no query yet #}
+        <div class="thread-empty">
+            <div class="thread-empty__icon">💬</div>
+            <h2 class="thread-empty__title">Search your messages</h2>
+            <p class="text-muted">
+                Enter keywords above to search across all messages. Supports full-text, prefix, and phrase search.
+            </p>
+        </div>
     {% endif %}
+
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Submit form on Enter; debounce for future live-search upgrade
+(function () {
+    const form  = document.getElementById('search-form');
+    const input = document.getElementById('search-query');
+    if (!form || !input) return;
+
+    // Auto-submit after 600 ms idle typing (only when query changes)
+    let debounceTimer;
+    let lastValue = input.value;
+
+    input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            if (input.value.trim() !== lastValue.trim() && input.value.trim().length > 1) {
+                lastValue = input.value;
+                form.submit();
+            }
+        }, 600);
+    });
+})();
+</script>
 {% endblock %}

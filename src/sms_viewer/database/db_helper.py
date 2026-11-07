@@ -184,6 +184,27 @@ class DatabaseHelper:
             conn.commit()
             return cur.rowcount if cur.rowcount >= 0 else 0
 
+    # -----------------------------------------------------------------------
+    # FTS5 Search operations
+    # -----------------------------------------------------------------------
+
+    def search_messages(
+            self, query: str, limit: int = 20, offset: int = 0
+    ) -> list[dict[str, Any]]:
+        """Full-text search over messages using SQLite FTS5.
+
+        Delegates to :func:`sms_viewer.feature.search.search_messages`.
+        Returns enriched rows with a ``snippet`` field containing HTML
+        ``<mark>`` highlights around matched terms.
+        """
+        from sms_viewer.feature.search import search_messages as _search
+        return _search(self, query=query, limit=limit, offset=offset)
+
+    def search_messages_count(self, query: str) -> int:
+        """Return total FTS5 match count for *query* (used for pagination)."""
+        from sms_viewer.feature.search import search_messages_count as _count
+        return _count(self, query=query)
+
 
 # ---------------------------------------------------------------------------
 # Module-level convenience helper functions

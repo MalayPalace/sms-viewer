@@ -35,7 +35,7 @@
             {% for message in msgs %}
                 <div class="message-row {% if message.type == 2 %}message-row--out{% else %}message-row--in{% endif %}" id="msg-{{ message.id }}">
                     <div class="message-bubble">
-                        <div class="message-text">{{ message.body }}</div>
+                        <div class="message-text">{{ message.body | highlight_entities }}</div>
                         <div class="message-meta">
                             <span class="message-time">{{ message.date | format_time }}</span>
                             {% if message.type == 2 %}
