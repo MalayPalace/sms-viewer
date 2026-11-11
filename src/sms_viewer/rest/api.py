@@ -5,14 +5,22 @@ Provides RESTful JSON endpoints for import, export, thread pagination, message l
 """
 
 from pathlib import Path
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request, session
 
 from sms_viewer.database.db_helper import DatabaseHelper
+from sms_viewer.feature.exporter import count_messages, export_to_json, parse_date_range
 from sms_viewer.feature.importer import get_import_history, import_backup_file
 from sms_viewer.feature.search import search_messages, search_messages_count
 from sms_viewer.utils import avatar_color_index, avatar_initial, format_time, format_timestamp
 
 api_bp = Blueprint("api", __name__)
+
+
+@api_bp.before_request
+def _require_login():
+    """Reject unauthenticated API calls with a JSON 401."""
+    if not session.get("user_id"):
+        return jsonify({"error": "Authentication required."}), 401
 
 
 def _get_db_helper() -> DatabaseHelper:
@@ -162,5 +170,26 @@ def import_history():
 
 @api_bp.route("/export")
 def export_sms():
-    """Date-range JSON export (Phase 5)."""
-    return jsonify({"error": "Export not yet implemented"}), 501
+    """Download messages in an optional ``from``/``to`` (YYYY-MM-DD) range as JSON."""
+    try:
+        start_ms, end_ms = parse_date_range(request.args.get("from"), request.args.get("to"))
+    except ValueError as err:
+        return jsonify({"error": f"Invalid date range: {err}"}), 400
+
+    payload = export_to_json(_get_db_helper(), start_ms, end_ms)
+    label = f"{request.args.get('from') or 'from-start'}_{request.args.get('to') or 'to-end'}"
+    return Response(
+        payload,
+        mimetype="application/json",
+        headers={"Content-Disposition": f'attachment; filename="sms_export_{label}.json"'},
+    )
+
+
+@api_bp.route("/export/count")
+def export_count():
+    """Number of messages in the selected range (export preview)."""
+    try:
+        start_ms, end_ms = parse_date_range(request.args.get("from"), request.args.get("to"))
+    except ValueError as err:
+        return jsonify({"error": f"Invalid date range: {err}"}), 400
+    return jsonify({"count": count_messages(_get_db_helper(), start_ms, end_ms)})

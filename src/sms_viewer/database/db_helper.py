@@ -10,7 +10,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-
+EXPORT_FIELDS = (
+    "id", "original_id", "thread_id", "address", "date", "date_sent",
+    "read", "status", "type", "body",
+)
 
 class DatabaseHelper:
     """Central database helper class for executing SQLite queries and transactions."""
@@ -175,6 +178,21 @@ class DatabaseHelper:
                 "SELECT COUNT(*) FROM messages WHERE address = ?", [address]
             )
             return cur.fetchone()[0]
+
+    def count_messages_where(self, where: str = "", params: list[Any] | None = None) -> int:
+        """Count messages matching a pre-built WHERE clause (e.g. ``" WHERE date >= ?"``)."""
+        with self.get_connection() as conn:
+            cur = conn.execute(f"SELECT COUNT(*) FROM messages{where}", params or [])
+            return cur.fetchone()[0]
+
+    def get_messages_where(
+        self, where: str = "", params: list[Any] | None = None
+    ) -> list[sqlite3.Row]:
+        """Fetch export columns of messages matching a pre-built WHERE clause, oldest first."""
+        cols = ", ".join(EXPORT_FIELDS)
+        query = f"SELECT {cols} FROM messages{where} ORDER BY date ASC, id ASC"
+        with self.get_connection() as conn:
+            return conn.execute(query, params or []).fetchall()
 
     def mark_thread_read(self, address: str) -> int:
         """Mark unread messages in a thread as read. Returns number of updated messages."""

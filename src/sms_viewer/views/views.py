@@ -107,5 +107,5 @@ def import_page():
 @views_bp.route("/export")
 @login_required
 def export_page():
-    """Export page (Phase 5)."""
+    """Export page with date-range pickers."""
     return render_template("export.html")

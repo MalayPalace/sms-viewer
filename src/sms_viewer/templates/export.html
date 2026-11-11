@@ -16,23 +16,66 @@
         <h2 class="page-title">Export Messages</h2>
         <p class="text-muted mb-16">Export your data to a JSON file based on a date range.</p>
         
-        <form class="export-form">
+        <form class="export-form" id="export-form" action="{{ url_for('api.export_sms') }}" method="GET">
             <div class="date-range">
                 <div class="form-group">
                     <label class="form-label" for="export-from">From Date</label>
-                    <input type="date" class="form-input" id="export-from">
+                    <input type="date" class="form-input" id="export-from" name="from">
                 </div>
                 <div class="form-group">
                     <label class="form-label" for="export-to">To Date</label>
-                    <input type="date" class="form-input" id="export-to">
+                    <input type="date" class="form-input" id="export-to" name="to">
                 </div>
             </div>
-            
-            <button type="button" class="btn btn--primary mt-16" disabled>Export JSON</button>
-            
-            <!-- Placeholder for phase 5 -->
-            <p class="text-center text-muted mt-8" style="font-size: 0.8rem">Export functionality will be implemented in Phase 5.</p>
+
+            <p class="text-muted mt-16" id="export-count" aria-live="polite">Leave dates empty to export everything.</p>
+            <p class="text-muted" id="export-error" role="alert" style="color: var(--md-error, #b3261e)" hidden></p>
+
+            <button type="submit" class="btn btn--primary mt-16" id="export-btn">Export JSON</button>
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const form = document.getElementById('export-form');
+    const from = document.getElementById('export-from');
+    const to = document.getElementById('export-to');
+    const countEl = document.getElementById('export-count');
+    const errEl = document.getElementById('export-error');
+    const btn = document.getElementById('export-btn');
+
+    async function refreshCount() {
+        const params = new URLSearchParams();
+        if (from.value) params.set('from', from.value);
+        if (to.value) params.set('to', to.value);
+        try {
+            const res = await fetch('/api/export/count?' + params);
+            const data = await res.json();
+            if (!res.ok) {
+                errEl.textContent = data.error || 'Invalid date range.';
+                errEl.hidden = false;
+                btn.disabled = true;
+                countEl.textContent = '';
+                return;
+            }
+            errEl.hidden = true;
+            btn.disabled = data.count === 0;
+            countEl.textContent = data.count + ' message' + (data.count === 1 ? '' : 's') + ' in selected range';
+        } catch (e) {
+            errEl.textContent = 'Could not load message count.';
+            errEl.hidden = false;
+        }
+    }
+
+    from.addEventListener('change', refreshCount);
+    to.addEventListener('change', refreshCount);
+    form.addEventListener('submit', function (ev) {
+        if (btn.disabled) ev.preventDefault();
+    });
+    refreshCount();
+})();
+</script>
 {% endblock %}

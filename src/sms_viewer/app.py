@@ -18,6 +18,24 @@ from sms_viewer.utils import avatar_color_index, avatar_initial, format_date_lab
 from sms_viewer.feature.recognizer import highlight_entities
 
 
+def _load_or_create_secret(path: Path) -> str:
+    """Return the persisted secret key, generating it (mode 0600) on first use."""
+    try:
+        existing = path.read_text().strip()
+        if existing:
+            return existing
+    except OSError:
+        pass
+    key = secrets.token_hex(32)
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as fh:
+            fh.write(key)
+    except OSError:
+        pass  # read-only location: fall back to a non-persistent key
+    return key
+
+
 def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Flask:
     """Create and configure the Flask application.
 
@@ -30,7 +48,7 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     secret_key:
         Flask secret key for session signing. When *None* it is read from
         ``SMS_VIEWER_SECRET`` env var; if that is also absent a random key
-        is generated (non-persistent across restarts).
+        is generated and stored in ``.secret_key`` beside the database.
     """
     app = Flask(__name__)
 
@@ -45,7 +63,7 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     _secret = (
         secret_key
         or os.environ.get("SMS_VIEWER_SECRET")
-        or secrets.token_hex(32)
+        or _load_or_create_secret(resolved_db.parent / ".secret_key")
     )
     app.config["SECRET_KEY"] = _secret
 

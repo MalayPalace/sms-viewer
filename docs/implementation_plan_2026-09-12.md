@@ -470,12 +470,13 @@ sms-viewer --help
 9. ✅ Search icon added to navbar (`base.html`)
 10. ✅ Tests: 47/47 passing (`tests/test_search.py` + all prior tests)
 
-### Phase 5: Authentication & Export
-1. Implement auth blueprint — setup, login, logout, session management
-2. Add `@login_required` protection to all routes
-3. Implement export pipeline — date range query, JSON download
-4. Create export UI page with date pickers
-5. Add SECRET_KEY generation and storage
+### Phase 5: Authentication & Export ✅ COMPLETE
+1. ✅ Auth blueprint — setup, login, logout, session management (`rest/auth.py`)
+2. ✅ `@login_required` on all page routes; `/api/*` returns JSON 401 when unauthenticated (`rest/api.py`)
+3. ✅ Export pipeline — inclusive date range → epoch ms, JSON download with `Content-Disposition` (`feature/exporter.py`, `/api/export`, `/api/export/count`)
+4. ✅ Export UI page with date pickers and live record count (`export.html`)
+5. ✅ SECRET_KEY: explicit arg > `SMS_VIEWER_SECRET` env > auto-generated and persisted to `.secret_key` (mode 0600) beside the DB (`app.py`)
+6. ✅ Tests: 67/67 passing (`tests/test_auth_export.py` + all prior tests)
 
 ### Phase 6: Polish & Production Readiness
 1. Error handling — 404, 500, flash messages
