@@ -55,7 +55,7 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     # ------------------------------------------------------------------
     # Configuration
     # ------------------------------------------------------------------
-    resolved_db: Path = db_path if db_path is not None else resolve_db_path()
+    resolved_db: Path = Path(db_path) if db_path is not None else resolve_db_path()
     app.config["DATABASE_PATH"] = resolved_db
     app.config["DB_PATH"] = resolved_db
 

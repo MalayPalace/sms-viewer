@@ -209,12 +209,18 @@ class DatabaseHelper:
     # -----------------------------------------------------------------------
 
     def fts_search(
-        self, safe_q: str, limit: int = 20, offset: int = 0
+        self,
+        safe_q: str,
+        limit: int = 20,
+        offset: int = 0,
+        hl_start: str = "<mark>",
+        hl_end: str = "</mark>",
     ) -> list[dict[str, Any]]:
         """Execute a sanitized FTS5 MATCH query and return raw result rows.
 
         Each row contains all ``messages`` columns plus a ``snippet`` field
-        with ``<mark>`` tags around matched terms (from FTS5 ``highlight()``).
+        with ``hl_start``/``hl_end`` around matched terms (FTS5 ``highlight()``).
+        The body text itself is returned unescaped; callers must escape it.
 
         Args:
             safe_q:  Pre-sanitized FTS5 MATCH expression from ``search.py``.
@@ -229,7 +235,7 @@ class DatabaseHelper:
                 m.type,
                 m.read,
                 m.body,
-                highlight(messages_fts, 0, '<mark>', '</mark>') AS snippet
+                highlight(messages_fts, 0, ?, ?) AS snippet
             FROM messages_fts AS fts
             JOIN messages AS m ON fts.rowid = m.id
             WHERE messages_fts MATCH ?
@@ -238,7 +244,7 @@ class DatabaseHelper:
         """
         try:
             with self.get_connection() as conn:
-                cur = conn.execute(sql, (safe_q, limit, offset))
+                cur = conn.execute(sql, (hl_start, hl_end, safe_q, limit, offset))
                 return [dict(row) for row in cur.fetchall()]
         except sqlite3.OperationalError:
             # Invalid FTS5 query syntax — return empty rather than 500

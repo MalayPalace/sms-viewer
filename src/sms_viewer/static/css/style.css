@@ -1256,6 +1256,14 @@ mark {
   flex-shrink: 0;
   margin-left: 8px;
 }
+.search-result-card__snippet mark {
+  background-color: var(--search-highlight);
+  color: var(--text-primary);
+  font-weight: 600;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
 .search-result-card__snippet {
   font-size: 0.855rem;
   color: var(--text-secondary);

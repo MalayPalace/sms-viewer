@@ -307,3 +307,24 @@ class TestSearchView:
         assert resp.status_code == 200
         html = resp.get_data(as_text=True)
         assert "No results" in html or "No matching" in html
+
+
+def test_snippet_escapes_html_and_marks_match(tmp_path):
+    from sms_viewer.database.db import init_db
+    from sms_viewer.database.db_helper import DatabaseHelper
+    from sms_viewer.feature.search import search_messages
+
+    path = tmp_path / "hl.db"
+    init_db(path)
+    helper = DatabaseHelper(path)
+    with helper.get_connection() as conn:
+        conn.execute(
+            "INSERT INTO messages (address, date, body, body_hash) VALUES (?,?,?,?)",
+            ("A", 1, "Your OTP is 123 <script>x</script> & more", "h"),
+        )
+        conn.commit()
+
+    snippet = search_messages(helper, "OTP")[0]["snippet"]
+    assert "<mark>OTP</mark>" in snippet
+    assert "<script>" not in snippet
+    assert "&lt;script&gt;" in snippet and "&amp;" in snippet

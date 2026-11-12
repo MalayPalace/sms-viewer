@@ -105,12 +105,53 @@ function initSearchClear() {
     });
 }
 
+function clearHighlights(root) {
+    root.querySelectorAll('mark.live-highlight').forEach(m => {
+        m.replaceWith(document.createTextNode(m.textContent));
+    });
+    root.normalize();
+}
+
+function highlightText(root, query) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+
+    nodes.forEach(node => {
+        const text = node.nodeValue;
+        const lower = text.toLowerCase();
+        let idx = lower.indexOf(query);
+        if (idx === -1) return;
+
+        const frag = document.createDocumentFragment();
+        let last = 0;
+        while (idx !== -1) {
+            frag.appendChild(document.createTextNode(text.slice(last, idx)));
+            const mark = document.createElement('mark');
+            mark.className = 'live-highlight';
+            mark.textContent = text.slice(idx, idx + query.length);
+            frag.appendChild(mark);
+            last = idx + query.length;
+            idx = lower.indexOf(query, last);
+        }
+        frag.appendChild(document.createTextNode(text.slice(last)));
+        node.replaceWith(frag);
+    });
+}
+
 function initThreadSearch() {
     const searchInput = document.getElementById('search-input');
     const threadList = document.getElementById('thread-list');
     const noResultsMsg = document.getElementById('search-no-results');
 
     if (!searchInput || !threadList) return;
+
+    searchInput.addEventListener('keydown', (ev) => {
+        const q = searchInput.value.trim();
+        if (ev.key === 'Enter' && q) {
+            window.location.href = '/search?q=' + encodeURIComponent(q);
+        }
+    });
 
     searchInput.addEventListener('input', () => {
         const query = searchInput.value.trim().toLowerCase();
@@ -120,10 +161,14 @@ function initThreadSearch() {
         threadItems.forEach(item => {
             const address = item.getAttribute('data-address') || '';
             const body = item.getAttribute('data-body') || '';
+            const targets = item.querySelectorAll('.thread-name, .thread-preview');
+
+            targets.forEach(clearHighlights);
 
             if (!query || address.includes(query) || body.includes(query)) {
                 item.closest('li').style.display = '';
                 visibleCount++;
+                if (query) targets.forEach(t => highlightText(t, query));
             } else {
                 item.closest('li').style.display = 'none';
             }
