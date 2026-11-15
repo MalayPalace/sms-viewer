@@ -50,23 +50,33 @@ def client(anon_client):
     return anon_client
 
 
+def _post(client, url, **data):
+    """POST a form with the CSRF token scraped from the rendered page, like a browser."""
+    html = client.get(url if url != "/logout" else "/login").get_data(as_text=True)
+    marker = 'name="csrf_token" value="'
+    token = html.split(marker)[1].split('"')[0] if marker in html else ""
+    return client.post(url, data={**data, "csrf_token": token})
+
+
 def test_setup_login_logout_flow(anon_client):
     assert anon_client.get("/login").headers["Location"].endswith("/setup")
-    r = anon_client.post("/setup", data={"username": "u", "password": "short", "confirm_password": "short"})
+    r = _post(anon_client, "/setup", username="u", password="short", confirm_password="short")
     assert b"at least 8" in r.data
-    r = anon_client.post("/setup", data={"username": "u", "password": "password1", "confirm_password": "nope"})
+    r = _post(anon_client, "/setup", username="u", password="password1", confirm_password="nope")
     assert b"do not match" in r.data
-    r = anon_client.post("/setup", data={"username": "u", "password": "password1", "confirm_password": "password1"})
+    r = _post(anon_client, "/setup", username="u", password="password1", confirm_password="password1")
     assert r.status_code == 302
     assert anon_client.get("/setup").headers["Location"].endswith("/login")
 
-    r = anon_client.post("/login", data={"username": "u", "password": "wrong"})
+    r = _post(anon_client, "/login", username="u", password="wrong")
     assert b"Invalid username or password" in r.data
-    r = anon_client.post("/login", data={"username": "u", "password": "password1"})
+    r = _post(anon_client, "/login", username="u", password="password1")
     assert r.status_code == 302
     assert anon_client.get("/").status_code == 200
 
-    anon_client.post("/logout")
+    with anon_client.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    anon_client.post("/logout", data={"csrf_token": "tok"})
     assert anon_client.get("/").status_code == 302
 
 
@@ -88,7 +98,9 @@ def test_api_requires_login(anon_client, url):
 
 
 def test_import_api_requires_login(anon_client):
-    assert anon_client.post("/api/import").status_code == 401
+    with anon_client.session_transaction() as s:
+        s["csrf_token"] = "tok"
+    assert anon_client.post("/api/import", headers={"X-CSRFToken": "tok"}).status_code == 401
 
 
 def test_secret_key_persisted(db_path, monkeypatch):

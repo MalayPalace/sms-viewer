@@ -136,10 +136,12 @@ def test_api_import_endpoint(temp_db, sample_zip):
     with client.session_transaction() as sess:
         sess["user_id"] = 1
         sess["username"] = "testuser"
+        sess["csrf_token"] = "tok"
 
     with open(sample_zip, "rb") as f:
         response = client.post(
             "/api/import",
+            headers={"X-CSRFToken": "tok"},
             data={"file": (f, "backup.zip")},
             content_type="multipart/form-data",
         )

@@ -11,6 +11,12 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from sms_viewer.database.db_helper import DatabaseHelper
+from sms_viewer.security import LoginRateLimiter
+
+MAX_USERNAME_LEN = 64
+MAX_PASSWORD_LEN = 256
+
+_limiter = LoginRateLimiter()
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -58,6 +64,10 @@ def setup():
             error = "Username is required."
         elif not password:
             error = "Password is required."
+        elif len(username) > MAX_USERNAME_LEN:
+            error = f"Username must be at most {MAX_USERNAME_LEN} characters."
+        elif len(password) > MAX_PASSWORD_LEN:
+            error = f"Password must be at most {MAX_PASSWORD_LEN} characters."
         elif len(password) < 8:
             error = "Password must be at least 8 characters."
         elif password != confirm:
@@ -91,11 +101,21 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
+        client = request.remote_addr or "unknown"
+        max_attempts = current_app.config["LOGIN_MAX_ATTEMPTS"]
+        window = current_app.config["LOGIN_WINDOW_SECONDS"]
+        wait = _limiter.retry_after(client, max_attempts, window)
+        if wait:
+            error = f"Too many failed attempts. Try again in {wait} seconds."
+            return render_template("auth/login.html", error=error), 429
+
         user = db_helper.get_user_by_username(username)
 
         if user is None or not check_password_hash(user["password_hash"], password):
+            _limiter.record_failure(client)
             error = "Invalid username or password."
         else:
+            _limiter.reset(client)
             session.clear()
             session["user_id"] = user["id"]
             session["username"] = username

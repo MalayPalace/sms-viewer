@@ -9,13 +9,14 @@ import os
 import secrets
 from pathlib import Path
 
-from flask import Flask, render_template
+from flask import Flask, jsonify, render_template, request
 
 from sms_viewer.database import close_db, init_db, resolve_db_path
 from sms_viewer.rest import api_bp, auth_bp
 from sms_viewer.views import views_bp
 from sms_viewer.utils import avatar_color_index, avatar_initial, format_date_label, format_time, format_timestamp
 from sms_viewer.feature.recognizer import highlight_entities
+from sms_viewer.security import init_security
 
 
 def _load_or_create_secret(path: Path) -> str:
@@ -101,14 +102,37 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
         return {"status": "ok", "db": str(resolved_db)}, 200
 
     # ------------------------------------------------------------------
+    # Security hardening (CSRF, headers, cookies, rate limiting config)
+    # ------------------------------------------------------------------
+    init_security(app)
+    app.config.setdefault("SEND_FILE_MAX_AGE_DEFAULT", 86400)
+
+    # ------------------------------------------------------------------
     # Error handlers
     # ------------------------------------------------------------------
-    @app.errorhandler(404)
-    def not_found(e):  # noqa: ANN001, ANN202
-        return render_template("errors/404.html"), 404
+    _error_titles = {
+        400: "Bad request",
+        403: "Forbidden",
+        404: "Page not found",
+        405: "Method not allowed",
+        413: "File too large",
+        429: "Too many requests",
+        500: "Something went wrong",
+    }
 
-    @app.errorhandler(500)
-    def server_error(e):  # noqa: ANN001, ANN202
-        return render_template("errors/500.html"), 500
+    def _handle_error(e):  # noqa: ANN001, ANN202
+        code = getattr(e, "code", 500) or 500
+        title = _error_titles.get(code, "Error")
+        message = {
+            404: "The page you are looking for does not exist.",
+            500: "An unexpected error occurred. Please try again.",
+        }.get(code) or getattr(e, "description", None) or title
+        if request.path.startswith("/api/"):
+            return jsonify({"error": message}), code
+        template = f"errors/{code}.html" if code in (404, 500) else "errors/error.html"
+        return render_template(template, code=code, title=title, message=message), code
+
+    for _code in _error_titles:
+        app.register_error_handler(_code, _handle_error)
 
     return app

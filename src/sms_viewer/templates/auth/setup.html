@@ -16,10 +16,11 @@
         </div>
         
         {% if error %}
-            <div class="auth-error">{{ error }}</div>
+            <div class="auth-error" role="alert">{{ error }}</div>
         {% endif %}
         
         <form method="POST" action="{{ url_for('auth.setup') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="username" class="form-label">Username</label>
                 <input type="text" id="username" name="username" class="form-input" required autofocus placeholder="Choose a username">

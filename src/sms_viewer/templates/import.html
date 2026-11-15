@@ -187,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const resp = await fetch('/api/import', {
                 method: 'POST',
+                headers: {'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content},
                 body: formData
             });
 

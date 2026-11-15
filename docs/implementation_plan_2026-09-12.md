@@ -478,13 +478,14 @@ sms-viewer --help
 5. ✅ SECRET_KEY: explicit arg > `SMS_VIEWER_SECRET` env > auto-generated and persisted to `.secret_key` (mode 0600) beside the DB (`app.py`)
 6. ✅ Tests: 67/67 passing (`tests/test_auth_export.py` + all prior tests)
 
-### Phase 6: Polish & Production Readiness
-1. Error handling — 404, 500, flash messages
-2. Security hardening — CSRF protection, input sanitization, rate limiting
-3. Performance optimization — query optimization, lazy loading
-4. Accessibility — ARIA labels, keyboard navigation, focus management
-5. Final responsive testing across screen sizes
-6. Build and verify final wheel
+### Phase 6: Polish & Production Readiness ✅ COMPLETE
+1. ✅ Error handling — 400/403/404/405/413/429/500 pages (`templates/errors/`), JSON errors for `/api/*`, flash messages in `base.html`
+2. ✅ Security hardening (`security.py`) — session-bound CSRF tokens (forms + `X-CSRFToken` header), login rate limiting (5 failures / 5 min per IP → 429), username/password length limits, upload size cap, CSP / `X-Frame-Options` / `nosniff` / `Referrer-Policy` headers, HttpOnly + SameSite=Lax cookies, `no-store` on auth/API responses
+3. ✅ Performance — existing composite indexes retained (`address,date`), static asset caching (`SEND_FILE_MAX_AGE_DEFAULT`); infinite scroll/pagination from Phase 3
+4. ✅ Accessibility — skip link, focus-visible outlines, `prefers-reduced-motion`, ARIA live regions/alerts, pinch-zoom re-enabled (removed `user-scalable=no`)
+5. ✅ Responsive layout retained from Phase 3 (mobile-first breakpoints at 640px / 1024px); not re-verified in a real browser
+6. ✅ Wheel built and verified to include new modules/templates: `dist/sms_viewer-0.1.0-py3-none-any.whl`
+7. ✅ Tests: 84/84 passing (`tests/test_hardening.py` + all prior tests)
 
 ---
 

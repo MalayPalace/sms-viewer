@@ -2,7 +2,8 @@
 <html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}SMS Viewer{% endblock %}</title>
     
     <!-- CSS -->
@@ -17,6 +18,7 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <div class="app-shell {% block app_shell_class %}{% endblock %}">
         
         <!-- Navigation Bar -->
@@ -43,6 +45,7 @@
                         
                         <!-- Logout -->
                         <form action="{{ url_for('auth.logout') }}" method="POST" style="display: inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="icon-btn" aria-label="Logout" title="Logout">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                             </button>
@@ -66,7 +69,7 @@
         <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="flash-messages">
+                <div class="flash-messages" role="status" aria-live="polite">
                     {% for category, message in messages %}
                         <div class="alert alert--{{ category if category != 'message' else 'info' }}">
                             {% if category == 'success' %}
@@ -84,14 +87,14 @@
         {% endwith %}
 
         <!-- Main Content -->
-        <main class="main-content">
+        <main class="main-content" id="main-content" tabindex="-1">
             {% block content %}{% endblock %}
         </main>
         
     </div>
     
     <!-- Copy Toast Placeholder -->
-    <div id="copy-toast" class="copy-toast"></div>
+    <div id="copy-toast" class="copy-toast" role="status" aria-live="polite"></div>
     
     {% block scripts %}{% endblock %}
 </body>
