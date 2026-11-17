@@ -1,6 +1,15 @@
 # SMS Viewer
 
-A production-ready Flask-based web application for viewing SMS backups. Features threaded conversations, full-text search, entity recognition (URLs, emails, phone numbers, OTPs), ZIP/NDJSON import with deduplication, and a Material Design 3 inspired responsive UI.
+App is a production-ready Flask-based web application for viewing SMS backups. Features threaded conversations, full-text search, entity recognition (URLs, emails, phone numbers, OTPs), ZIP/NDJSON import with deduplication, and a Material Design 3 inspired responsive UI.
+
+## Intent
+SMS Viewer is a viewer only simplistic app created out of Android's Sms privacy in mind. Now a days many of the android's app ask for sms permission (banking/ecommerce/UPI apps). Most exploitable permissions are: 
+- read-sms permission: which allow app to read entire sms list from the android sms storage. 
+- receive-sms permission: which invokes the app's intent as soon as sms arrives.
+
+I feel using these sms, an app can profile entire lifestyle/usage of a person and as a Android User we are hopeless in preventing it because some apps don't without those permission. Ofcourse root and ADB + AppOps are the possible ways which can prevent it but those app specifically check for root/developer options settings and dont allow it.    
+
+To circumvent it(atleast part of it) created this app which serves a viewer only sms app by which you can backup sms and delete sms from android phones and import it for viewing and search functionality. Messages exported through https://github.com/tmo1/sms-ie app can be imported directly with this app.
 
 ## Installation
 
