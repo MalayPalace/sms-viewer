@@ -6,7 +6,6 @@
 /* -------------------------------------------------------------------------
    Google Font Import
    ------------------------------------------------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* -------------------------------------------------------------------------
    CSS Custom Properties — Design Tokens
@@ -81,7 +80,7 @@
   --radius-full: 9999px;
 
   /* Typography */
-  --font-sans:  'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans:  system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono:  'Fira Code', 'Consolas', monospace;
 }
 
