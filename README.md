@@ -2,7 +2,7 @@
 
 A private, self-hosted, **read-only** web viewer for your SMS backups. Your messages stay on your own machine: no cloud, no accounts, no telemetry.
 
-Features: threaded conversations, full-text search, entity recognition (URLs, emails, phone numbers, OTPs with copy-to-clipboard), ZIP/NDJSON import with deduplication, JSON export by date range, and a responsive Material Design 3 inspired UI with light/dark themes.
+Features: threaded conversations, full-text search, entity recognition (URLs, emails, phone numbers, OTPs with copy-to-clipboard), ZIP/NDJSON import with deduplication, JSON export by date range, installable PWA, and a responsive Material Design 3 inspired UI with light/dark themes.
 
 ## Intent: Privacy and Self-Hosting
 
@@ -58,6 +58,28 @@ sms-viewer --help
 ### First run
 
 On first run you are redirected to a setup page to create your username and password (minimum 8 characters). After that, log in to access your messages. Then use the **Import** page to upload your backup (`.zip` or `.ndjson`); re-importing the same file is safe because duplicates are skipped.
+
+## Search
+
+On the **Search** page, press Enter to search. The home page filter box narrows conversations as you type.
+
+| Syntax | Meaning |
+|---|---|
+| `word*` | prefix match |
+| `"exact phrase"` | phrase match |
+| `address:HDFC`, `body:OTP` | restrict to sender or body |
+| `date:2024-05-20` | a single day |
+| `date:2024-05`, `date:2024` | a month or a year |
+| `date:2024-05-01..2024-05-31` | an inclusive range (either end may be left open) |
+
+Filters combine, e.g. `otp date:2024-05 address:HDFC`. A `date:` filter on its own lists all messages in that period.
+
+## Install as an App (PWA)
+
+SMS Viewer can be installed as a standalone app on Android and desktop browsers (Chrome/Edge: menu, then **Install app** / **Add to Home screen**).
+
+- Browsers only allow installation from a secure origin: `https://...` or `http://localhost`. Plain `http://<LAN-IP>:5000` will not offer install. Serve it over HTTPS (for example via a reverse proxy, Tailscale HTTPS, or Termux with a local proxy).
+- The service worker caches only CSS, JS and icons. Messages and API responses are never cached, so no SMS content is stored in the browser. Offline, the app shows a simple "You are offline" page.
 
 ## Self-Hosting Notes
 

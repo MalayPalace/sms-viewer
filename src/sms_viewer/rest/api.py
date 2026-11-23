@@ -10,7 +10,7 @@ from flask import Blueprint, Response, current_app, jsonify, request, session
 from sms_viewer.database.db_helper import DatabaseHelper
 from sms_viewer.feature.exporter import count_messages, export_to_json, parse_date_range
 from sms_viewer.feature.importer import get_import_history, import_backup_file
-from sms_viewer.feature.search import search_messages, search_messages_count
+from sms_viewer.feature.search import parse_search_query, search_messages, search_messages_count
 from sms_viewer.utils import avatar_color_index, avatar_initial, format_time, format_timestamp
 
 api_bp = Blueprint("api", __name__)
@@ -50,6 +50,11 @@ def search():
 
     if not raw_q:
         return jsonify({"results": [], "total": 0, "page": page, "limit": limit, "has_more": False, "query": ""})
+
+    query_error = parse_search_query(raw_q).get_error()
+    if query_error:
+        return jsonify({"results": [], "total": 0, "page": page, "limit": limit,
+                        "has_more": False, "query": raw_q, "error": query_error}), 400
 
     offset = (page - 1) * limit
     raw_results = search_messages(db_helper, query=raw_q, limit=limit, offset=offset)

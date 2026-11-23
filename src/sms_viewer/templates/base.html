@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <!-- PWA -->
+    <link rel="manifest" href="{{ url_for('pwa.manifest') }}">
+    <meta name="theme-color" content="#6750a4">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="SMS Viewer">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <title>{% block title %}SMS Viewer{% endblock %}</title>
     
     <!-- CSS -->
@@ -97,5 +104,6 @@
     <div id="copy-toast" class="copy-toast" role="status" aria-live="polite"></div>
     
     {% block scripts %}{% endblock %}
+<a href="https://www.flaticon.com/free-icons/sms" title="sms icons">Sms icons created by MdTaslimUddinSakib - Flaticon</a>
 </body>
 </html>

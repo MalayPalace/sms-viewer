@@ -16,6 +16,7 @@ from sms_viewer.rest import api_bp, auth_bp
 from sms_viewer.views import views_bp
 from sms_viewer.utils import avatar_color_index, avatar_initial, format_date_label, format_time, format_timestamp
 from sms_viewer.feature.recognizer import highlight_entities
+from sms_viewer.pwa import pwa_bp
 from sms_viewer.security import init_security
 
 
@@ -81,6 +82,7 @@ def create_app(db_path: Path | None = None, secret_key: str | None = None) -> Fl
     # ------------------------------------------------------------------
     app.register_blueprint(auth_bp)
     app.register_blueprint(views_bp)
+    app.register_blueprint(pwa_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
 
     # ------------------------------------------------------------------

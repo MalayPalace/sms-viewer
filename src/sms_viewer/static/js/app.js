@@ -10,7 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearchClear();
     initThreadSearch();
     initThreadPagination();
+    registerServiceWorker();
 });
+
+// -----------------------------------------------------------------------------
+// PWA service worker (requires HTTPS or localhost)
+// -----------------------------------------------------------------------------
+function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+}
 
 // -----------------------------------------------------------------------------
 // Theme Management

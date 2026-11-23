@@ -22,7 +22,7 @@
             id="search-query"
             name="q"
             class="search-input"
-            placeholder="Search messages, senders… (OTP*, &quot;phrase&quot;, word*)"
+            placeholder="Search messages… (word*, &quot;phrase&quot;, address:HDFC, date:2024-05)"
             value="{{ query }}"
             autocomplete="off"
             autofocus
@@ -36,14 +36,17 @@
         {% endif %}
     </div>
     <p class="search-hint text-muted">
-        Tip: use <code>word*</code> for prefix, <code>"exact phrase"</code> for phrase, <code>address:HDFC</code> or <code>body:OTP</code> for column filters
+        Tip: use <code>word*</code> for prefix, <code>"exact phrase"</code> for phrase, <code>address:HDFC</code> or <code>body:OTP</code> for column filters,
+        <code>date:2024-05-20</code>, <code>date:2024-05</code>, <code>date:2024</code> or <code>date:2024-05-01..2024-05-31</code> for dates (combine, e.g. <code>date:2024-05 address:HDFC</code>). Press Enter to search.
     </p>
 </form>
 
 {# ── Results area ────────────────────────────────────────────────────────── #}
 <div class="search-results" id="search-results" role="region" aria-label="Search results">
 
-    {% if query %}
+    {% if query and query_error %}
+        <div class="alert alert--error" role="alert"><span>{{ query_error }}</span></div>
+    {% elif query %}
         {# ── Results header ── #}
         <div class="search-results-header">
             {% if total > 0 %}
@@ -137,29 +140,4 @@
     {% endif %}
 
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-// Submit form on Enter; debounce for future live-search upgrade
-(function () {
-    const form  = document.getElementById('search-form');
-    const input = document.getElementById('search-query');
-    if (!form || !input) return;
-
-    // Auto-submit after 600 ms idle typing (only when query changes)
-    let debounceTimer;
-    let lastValue = input.value;
-
-    input.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            if (input.value.trim() !== lastValue.trim() && input.value.trim().length > 1) {
-                lastValue = input.value;
-                form.submit();
-            }
-        }, 600);
-    });
-})();
-</script>
 {% endblock %}

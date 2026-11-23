@@ -208,6 +208,18 @@ class DatabaseHelper:
     # (called by feature/search.py after input sanitization)
     # -----------------------------------------------------------------------
 
+    @staticmethod
+    def _date_clause(start_ms: int | None, end_ms: int | None) -> tuple[str, list[int]]:
+        clauses, params = [], []
+        if start_ms is not None:
+            clauses.append("m.date >= ?")
+            params.append(start_ms)
+        if end_ms is not None:
+            clauses.append("m.date <= ?")
+            params.append(end_ms)
+        date_clause = "".join(f" AND {c}" for c in clauses)
+        return date_clause, params
+
     def fts_search(
         self,
         safe_q: str,
@@ -215,55 +227,69 @@ class DatabaseHelper:
         offset: int = 0,
         hl_start: str = "<mark>",
         hl_end: str = "</mark>",
+        start_ms: int | None = None,
+        end_ms: int | None = None,
     ) -> list[dict[str, Any]]:
-        """Execute a sanitized FTS5 MATCH query and return raw result rows.
+        """Search messages by FTS5 expression and/or date range; return raw rows.
 
-        Each row contains all ``messages`` columns plus a ``snippet`` field
-        with ``hl_start``/``hl_end`` around matched terms (FTS5 ``highlight()``).
-        The body text itself is returned unescaped; callers must escape it.
+        Each row contains the message columns plus a ``snippet`` field. With an FTS
+        expression the snippet wraps matches in ``hl_start``/``hl_end`` (FTS5
+        ``highlight()``); with only a date range it is the plain body. Text is
+        returned unescaped; callers must escape it.
 
         Args:
-            safe_q:  Pre-sanitized FTS5 MATCH expression from ``search.py``.
-            limit:   Maximum rows to return.
-            offset:  Row offset for pagination.
+            safe_q:   Pre-sanitized FTS5 MATCH expression (may be empty for date-only).
+            start_ms: Inclusive lower bound on message date (epoch ms).
+            end_ms:   Inclusive upper bound on message date (epoch ms).
         """
-        sql = """
-            SELECT
-                m.id,
-                m.address,
-                m.date,
-                m.type,
-                m.read,
-                m.body,
-                highlight(messages_fts, 0, ?, ?) AS snippet
-            FROM messages_fts AS fts
-            JOIN messages AS m ON fts.rowid = m.id
-            WHERE messages_fts MATCH ?
-            ORDER BY rank
-            LIMIT ? OFFSET ?
-        """
+        date_sql, date_params = self._date_clause(start_ms, end_ms)
+        if safe_q:
+            sql = f"""
+                SELECT m.id, m.address, m.date, m.type, m.read, m.body,
+                       highlight(messages_fts, 0, ?, ?) AS snippet
+                FROM messages_fts AS fts
+                JOIN messages AS m ON fts.rowid = m.id
+                WHERE messages_fts MATCH ?{date_sql}
+                ORDER BY rank
+                LIMIT ? OFFSET ?
+            """
+            params = [hl_start, hl_end, safe_q, *date_params, limit, offset]
+        else:
+            sql = f"""
+                SELECT m.id, m.address, m.date, m.type, m.read, m.body, m.body AS snippet
+                FROM messages AS m
+                WHERE 1=1{date_sql}
+                ORDER BY m.date DESC, m.id DESC
+                LIMIT ? OFFSET ?
+            """
+            params = [*date_params, limit, offset]
         try:
             with self.get_connection() as conn:
-                cur = conn.execute(sql, (hl_start, hl_end, safe_q, limit, offset))
+                cur = conn.execute(sql, params)
                 return [dict(row) for row in cur.fetchall()]
         except sqlite3.OperationalError:
             # Invalid FTS5 query syntax — return empty rather than 500
             return []
 
-    def fts_count(self, safe_q: str) -> int:
-        """Return total FTS5 match count for a sanitized query expression.
-
-        Args:
-            safe_q: Pre-sanitized FTS5 MATCH expression from ``search.py``.
-        """
-        sql = """
-            SELECT COUNT(*)
-            FROM messages_fts AS fts
-            WHERE messages_fts MATCH ?
-        """
+    def fts_count(
+        self, safe_q: str, start_ms: int | None = None, end_ms: int | None = None
+    ) -> int:
+        """Return total matches for the same filters as ``fts_search``."""
+        date_sql, date_params = self._date_clause(start_ms, end_ms)
+        if safe_q:
+            sql = f"""
+                SELECT COUNT(*)
+                FROM messages_fts AS fts
+                JOIN messages AS m ON fts.rowid = m.id
+                WHERE messages_fts MATCH ?{date_sql}
+            """
+            params = [safe_q, *date_params]
+        else:
+            sql = f"SELECT COUNT(*) FROM messages AS m WHERE 1=1{date_sql}"
+            params = date_params
         try:
             with self.get_connection() as conn:
-                cur = conn.execute(sql, (safe_q,))
+                cur = conn.execute(sql, params)
                 return cur.fetchone()[0]
         except sqlite3.OperationalError:
             return 0
